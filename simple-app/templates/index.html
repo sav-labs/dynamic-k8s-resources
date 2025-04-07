@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Управление ресурсами</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .container {
+            background-color: #f8f9fa;
+            border-radius: 5px;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            color: #333;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input[type="range"] {
+            width: 100%;
+        }
+        .value-display {
+            font-weight: bold;
+            margin-left: 10px;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0069d9;
+        }
+        .stats {
+            margin-top: 30px;
+            padding: 15px;
+            background-color: #e9ecef;
+            border-radius: 5px;
+        }
+        .stats-title {
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        .stat-item {
+            margin-bottom: 5px;
+        }
+        .memory-unit {
+            margin-left: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Настройка потребления ресурсов</h1>
+        
+        <form id="resourceForm">
+            <div class="form-group">
+                <label for="cpuRange">Нагрузка CPU (%): <span id="cpuValue" class="value-display">{{ cpu_load }}</span></label>
+                <input type="range" id="cpuRange" name="cpu" min="0" max="100" value="{{ cpu_load }}" oninput="updateValue('cpuRange', 'cpuValue')">
+            </div>
+            
+            <div class="form-group">
+                <label for="memoryRange">Потребление памяти: <span id="memoryValue" class="value-display">{{ memory_load_mb / 1024 }}</span> ГБ</label>
+                <input type="range" id="memoryRange" name="memory" min="0" max="8" step="0.1" value="{{ memory_load_mb / 1024 }}" oninput="updateValue('memoryRange', 'memoryValue', true)">
+            </div>
+            
+            <button type="submit">Применить настройки</button>
+        </form>
+        
+        <div class="stats">
+            <div class="stats-title">Текущее состояние:</div>
+            <div class="stat-item">CPU: <span id="currentCpu">-</span>%</div>
+            <div class="stat-item">Память: <span id="currentMemory">-</span> ГБ</div>
+        </div>
+    </div>
+
+    <script>
+        // Обновление отображаемого значения при перемещении ползунка
+        function updateValue(rangeName, valueName, isMemory = false) {
+            const range = document.getElementById(rangeName);
+            const value = document.getElementById(valueName);
+            if (isMemory) {
+                value.textContent = parseFloat(range.value).toFixed(1);
+            } else {
+                value.textContent = range.value;
+            }
+        }
+
+        // Обработка отправки формы
+        document.getElementById('resourceForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData();
+            formData.append('cpu', document.getElementById('cpuRange').value);
+            // Преобразуем ГБ в МБ для отправки на сервер
+            const memoryGb = parseFloat(document.getElementById('memoryRange').value);
+            formData.append('memory', Math.round(memoryGb * 1024));
+            
+            fetch('/update_resources', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log('Настройки обновлены:', data);
+            })
+            .catch(error => {
+                console.error('Ошибка при обновлении настроек:', error);
+            });
+        });
+
+        // Периодическое обновление информации о текущем состоянии
+        function updateStatus() {
+            fetch('/status')
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('currentCpu').textContent = data.current_cpu.toFixed(1);
+                // Отображаем память в ГБ
+                document.getElementById('currentMemory').textContent = (data.current_memory / 1024).toFixed(2);
+            })
+            .catch(error => {
+                console.error('Ошибка при получении статуса:', error);
+            });
+        }
+
+        // Обновление статуса каждые 2 секунды
+        setInterval(updateStatus, 2000);
+        
+        // Первичное обновление статуса
+        updateStatus();
+    </script>
+</body>
+</html>

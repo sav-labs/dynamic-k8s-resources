@@ -1,0 +1,53 @@
+replicaCount: 1
+
+image:
+  repository: sav116/resource-changer-app
+  tag: latest
+  pullPolicy: Always
+
+nameOverride: ""
+fullnameOverride: ""
+
+podLabels:
+  dynamic-resources: "true"
+
+service:
+  type: LoadBalancer
+  port: 5000
+  targetPort: 5000
+  annotations:
+    service.beta.kubernetes.io/external-traffic: "Local"
+  externalTrafficPolicy: "Local"
+  loadBalancerIP: 192.168.88.206
+  # labels:
+  #   app.kubernetes.io/component: backend
+  #   environment: production
+
+resources:
+  limits:
+    cpu: 3
+    memory: 256Mi
+  requests:
+    cpu: 500m
+    memory: 256Mi
+
+# Добавляем стратегию перезапуска
+strategy:
+  type: RollingUpdate
+  rollingUpdate:
+    maxSurge: 1
+    maxUnavailable: 0
+
+# Добавляем настройки автомасштабирования
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 3
+  targetCPUUtilizationPercentage: 80
+  targetMemoryUtilizationPercentage: 80
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {} 

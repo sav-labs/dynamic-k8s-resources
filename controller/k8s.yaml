@@ -1,0 +1,82 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: resource-changer
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: metrics-fetcher-sa
+  namespace: resource-changer
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: aggregated-metrics-reader-custom
+rules:
+  - apiGroups: ["metrics.k8s.io"]
+    resources: ["pods"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "list", "watch", "update", "patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: metrics-fetcher-binding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: aggregated-metrics-reader-custom
+subjects:
+  - kind: ServiceAccount
+    name: metrics-fetcher-sa
+    namespace: resource-changer
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: metrics-fetcher
+  namespace: resource-changer
+  labels:
+    app: metrics-fetcher
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: metrics-fetcher
+  template:
+    metadata:
+      labels:
+        app: metrics-fetcher
+    spec:
+      serviceAccountName: metrics-fetcher-sa
+      containers:
+        - name: metrics-fetcher
+          image: sav116/resource-changer-controller:latest
+          imagePullPolicy: Always
+          env:
+            - name: METRICS_SERVER_URL
+              value: "https://metrics-server.default.svc.cluster.local"
+            - name: VERIFY_CERT
+              value: "false"
+            - name: METRICS_FETCH_INTERVAL
+              value: "1"
+            - name: KUBE_STATE_METRICS_URL
+              value: "http://kube-state-metrics.lens-metrics.svc.cluster.local:8080/metrics"
+            - name: LOG_LEVEL
+              value: "INFO"
+            - name: LABEL_SELECTOR
+              value: "dynamic-resources=true"
+            - name: SCALE_UP_THRESHOLD
+              value: "0.5"
+            - name: SCALE_UP_USAGE_MULTIPLIER
+              value: "2.5"
+            - name: "SCALE_DOWN_USAGE_MULTIPLIER"
+              value: "2.5"
+            - name: COOLDOWN_PERIOD_SECONDS
+              value: "60"
+            - name: MIN_REQUEST_MEMORY
+              value: "150"

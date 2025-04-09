@@ -39,20 +39,16 @@ The controller supports the following environment variables:
 | Variable | Description | Default Value |
 |------------|----------|------------------------|
 | `METRICS_SERVER_URL` | URL to access the metrics-server | `https://metrics-server.kube-system.svc.cluster.local` |
-| `KUBE_STATE_METRICS_URL` | URL to access the Kube State Metrics API | Not set |
-| `KUBERNETES_API_SERVER` | URL for Kubernetes API server | `https://kubernetes.default.svc` |
-| `METRICS_FETCH_INTERVAL` | Interval between metrics checks (in seconds) | `30` |
 | `VERIFY_CERT` | Whether to verify SSL certificates when making requests | `true` |
+| `METRICS_FETCH_INTERVAL` | Interval between metrics checks (in seconds) | `30` |
+| `KUBE_STATE_METRICS_URL` | URL to access the Kube State Metrics API | Not set |
 | `LOG_LEVEL` | Logging level (DEBUG, INFO, WARNING, ERROR) | `INFO` |
 | `LABEL_SELECTOR` | Label selector to filter pods for monitoring | Not set - monitors all pods |
 | `SCALE_UP_THRESHOLD` | Memory usage ratio threshold to trigger scaling up | `0.8` (80%) |
 | `SCALE_UP_USAGE_MULTIPLIER` | Multiplier applied to current usage when scaling up | `1.4` (140%) |
-| `SCALE_UP_MIN_GROWTH` | Minimum growth factor of current request when scaling up | `1.2` (120%) |
-| `SCALE_DOWN_THRESHOLD` | Memory usage ratio threshold to trigger scaling down | `0.3` (30%) |
 | `SCALE_DOWN_USAGE_MULTIPLIER` | Multiplier applied to current usage when scaling down | `2.5` (250%) |
-| `SCALE_DOWN_MIN_DIFF` | Minimum difference percentage to trigger scaling down | `0.2` (20%) |
-| `MIN_REQUEST_MEMORY` | Minimum memory request in MiB | `100` |
 | `COOLDOWN_PERIOD_SECONDS` | Seconds to wait after scaling before allowing scale down | `600` (10 minutes) |
+| `MIN_REQUEST_MEMORY` | Minimum memory request in MiB | `100` |
 
 ## Deployment to Kubernetes
 

@@ -73,7 +73,7 @@ spec:
             - name: SCALE_UP_THRESHOLD
               value: "0.5"
             - name: SCALE_UP_USAGE_MULTIPLIER
-              value: "2.5"
+              value: "3"
             - name: "SCALE_DOWN_USAGE_MULTIPLIER"
               value: "2.5"
             - name: COOLDOWN_PERIOD_SECONDS

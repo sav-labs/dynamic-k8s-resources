@@ -1,147 +1,194 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Управление ресурсами</title>
+    <title>Memory Increaser</title>
     <style>
         body {
-            font-family: Arial, sans-serif;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             max-width: 800px;
             margin: 0 auto;
             padding: 20px;
-        }
-        .container {
-            background-color: #f8f9fa;
-            border-radius: 5px;
-            padding: 20px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-        }
-        h1 {
+            background-color: #f7f9fc;
             color: #333;
         }
-        .form-group {
-            margin-bottom: 15px;
+        .container {
+            background-color: white;
+            border-radius: 8px;
+            padding: 25px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
         }
-        label {
-            display: block;
-            margin-bottom: 5px;
-            font-weight: bold;
+        h1 {
+            color: #2c3e50;
+            margin-top: 0;
+            text-align: center;
+            margin-bottom: 30px;
         }
-        input[type="range"] {
-            width: 100%;
-        }
-        .value-display {
-            font-weight: bold;
-            margin-left: 10px;
-        }
-        button {
-            background-color: #007bff;
-            color: white;
-            border: none;
-            padding: 10px 15px;
+        .info-box {
+            background-color: #e3f2fd;
+            border-left: 4px solid #2196f3;
+            padding: 15px;
+            margin-bottom: 25px;
             border-radius: 4px;
-            cursor: pointer;
-        }
-        button:hover {
-            background-color: #0069d9;
         }
         .stats {
             margin-top: 30px;
-            padding: 15px;
-            background-color: #e9ecef;
-            border-radius: 5px;
+            padding: 20px;
+            background-color: #f1f8e9;
+            border-radius: 8px;
+            border-left: 4px solid #8bc34a;
         }
         .stats-title {
             font-weight: bold;
-            margin-bottom: 10px;
+            margin-bottom: 15px;
+            color: #558b2f;
         }
         .stat-item {
-            margin-bottom: 5px;
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #dcedc8;
         }
-        .memory-unit {
-            margin-left: 10px;
+        .stat-label {
+            font-weight: 500;
+        }
+        .stat-value {
+            font-family: monospace;
+            font-size: 1.1em;
+        }
+        .memory-chart {
+            width: 100%;
+            height: 250px;
+            margin-top: 20px;
+            margin-bottom: 20px;
+            background-color: #f5f5f5;
+            border-radius: 4px;
+            overflow: hidden;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>Настройка потребления ресурсов</h1>
+        <h1>Memory Increaser</h1>
         
-        <form id="resourceForm">
-            <div class="form-group">
-                <label for="cpuRange">Нагрузка CPU (%): <span id="cpuValue" class="value-display">{{ cpu_load }}</span></label>
-                <input type="range" id="cpuRange" name="cpu" min="0" max="100" value="{{ cpu_load }}" oninput="updateValue('cpuRange', 'cpuValue')">
-            </div>
-            
-            <div class="form-group">
-                <label for="memoryRange">Потребление памяти: <span id="memoryValue" class="value-display">{{ memory_load_mb / 1024 }}</span> ГБ</label>
-                <input type="range" id="memoryRange" name="memory" min="0" max="8" step="0.1" value="{{ memory_load_mb / 1024 }}" oninput="updateValue('memoryRange', 'memoryValue', true)">
-            </div>
-            
-            <button type="submit">Применить настройки</button>
-        </form>
+        <div class="info-box">
+            This application is increasing memory usage by <strong>{{ memory_increment_mb }} MB</strong> per second as configured by the environment variable <code>MEMORY_INCREMENT_MB</code>.
+        </div>
+        
+        <div class="memory-chart" id="memoryChart"></div>
         
         <div class="stats">
-            <div class="stats-title">Текущее состояние:</div>
-            <div class="stat-item">CPU: <span id="currentCpu">-</span>%</div>
-            <div class="stat-item">Память: <span id="currentMemory">-</span> ГБ</div>
+            <div class="stats-title">Current Status:</div>
+            
+            <div class="stat-item">
+                <span class="stat-label">Memory Usage:</span>
+                <span class="stat-value" id="currentMemory">-</span>
+            </div>
+            
+            <div class="stat-item">
+                <span class="stat-label">Memory Increment Rate:</span>
+                <span class="stat-value">{{ memory_increment_mb }} MB/s</span>
+            </div>
+            
+            <div class="stat-item">
+                <span class="stat-label">System Memory:</span>
+                <span class="stat-value" id="systemMemoryPercent">-</span>
+            </div>
+            
+            <div class="stat-item">
+                <span class="stat-label">Available Memory:</span>
+                <span class="stat-value" id="availableMemory">-</span>
+            </div>
+            
+            <div class="stat-item">
+                <span class="stat-label">Total Memory:</span>
+                <span class="stat-value" id="totalMemory">-</span>
+            </div>
+            
+            <div class="stat-item">
+                <span class="stat-label">CPU Usage:</span>
+                <span class="stat-value" id="currentCpu">-</span>
+            </div>
         </div>
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
-        // Обновление отображаемого значения при перемещении ползунка
-        function updateValue(rangeName, valueName, isMemory = false) {
-            const range = document.getElementById(rangeName);
-            const value = document.getElementById(valueName);
-            if (isMemory) {
-                value.textContent = parseFloat(range.value).toFixed(1);
-            } else {
-                value.textContent = range.value;
+        // Initialize chart
+        const ctx = document.getElementById('memoryChart').getContext('2d');
+        const memoryChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: [{
+                    label: 'Memory Usage (MB)',
+                    data: [],
+                    borderColor: 'rgb(75, 192, 192)',
+                    tension: 0.1,
+                    fill: true,
+                    backgroundColor: 'rgba(75, 192, 192, 0.2)'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                },
+                animation: {
+                    duration: 0
+                }
             }
-        }
-
-        // Обработка отправки формы
-        document.getElementById('resourceForm').addEventListener('submit', function(e) {
-            e.preventDefault();
-            
-            const formData = new FormData();
-            formData.append('cpu', document.getElementById('cpuRange').value);
-            // Преобразуем ГБ в МБ для отправки на сервер
-            const memoryGb = parseFloat(document.getElementById('memoryRange').value);
-            formData.append('memory', Math.round(memoryGb * 1024));
-            
-            fetch('/update_resources', {
-                method: 'POST',
-                body: formData
-            })
-            .then(response => response.json())
-            .then(data => {
-                console.log('Настройки обновлены:', data);
-            })
-            .catch(error => {
-                console.error('Ошибка при обновлении настроек:', error);
-            });
         });
-
-        // Периодическое обновление информации о текущем состоянии
+        
+        // Store timestamps and memory values
+        const timePoints = [];
+        const memoryValues = [];
+        const maxDataPoints = 60; // Show last 60 seconds
+        
+        // Update status and chart
         function updateStatus() {
             fetch('/status')
             .then(response => response.json())
             .then(data => {
-                document.getElementById('currentCpu').textContent = data.current_cpu.toFixed(1);
-                // Отображаем память в ГБ
-                document.getElementById('currentMemory').textContent = (data.current_memory / 1024).toFixed(2);
+                // Update stats
+                document.getElementById('currentMemory').textContent = `${data.current_memory.toFixed(2)} MB (${data.current_memory_gb.toFixed(3)} GB)`;
+                document.getElementById('systemMemoryPercent').textContent = `${data.system_memory_percent.toFixed(1)}%`;
+                document.getElementById('availableMemory').textContent = `${data.system_memory_available_gb.toFixed(2)} GB`;
+                document.getElementById('totalMemory').textContent = `${data.system_memory_total_gb.toFixed(2)} GB`;
+                document.getElementById('currentCpu').textContent = `${data.current_cpu.toFixed(1)}%`;
+                
+                // Update chart data
+                const now = new Date();
+                const timeString = now.toLocaleTimeString();
+                
+                timePoints.push(timeString);
+                memoryValues.push(data.current_memory);
+                
+                // Keep only the last maxDataPoints
+                if (timePoints.length > maxDataPoints) {
+                    timePoints.shift();
+                    memoryValues.shift();
+                }
+                
+                // Update chart
+                memoryChart.data.labels = timePoints;
+                memoryChart.data.datasets[0].data = memoryValues;
+                memoryChart.update();
             })
             .catch(error => {
-                console.error('Ошибка при получении статуса:', error);
+                console.error('Error getting status:', error);
             });
         }
 
-        // Обновление статуса каждые 2 секунды
-        setInterval(updateStatus, 2000);
+        // Update every second
+        setInterval(updateStatus, 1000);
         
-        // Первичное обновление статуса
+        // Initial update
         updateStatus();
     </script>
 </body>

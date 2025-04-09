@@ -1,72 +1,91 @@
-# Resource Usage Controller
+# Memory Increaser Application
 
-Простое веб-приложение для управления потреблением CPU и RAM внутри контейнера.
+A simple web application that precisely increases memory consumption by a configurable amount (in MB) per second. This application is designed for testing memory limits, autoscaling, and OOM behaviors in Kubernetes.
 
-## Функциональность
+## Features
 
-- Веб-интерфейс для настройки уровня нагрузки CPU (0-100%)
-- Настройка объема используемой оперативной памяти (0-1000 МБ)
-- Мониторинг текущего потребления ресурсов в реальном времени
+- Increases memory consumption at a steady rate specified by an environment variable
+- Real-time memory usage monitoring with chart visualization
+- Clean, responsive web UI
+- Kubernetes-ready with health checks
+- Helm chart for easy deployment
 
-## Запуск приложения
+## Configuration
 
-### Локально
+The application is configured using the following environment variable:
 
-1. Установите зависимости:
+- `MEMORY_INCREMENT_MB`: Memory consumption rate in MB per second (default: 10)
+
+## Local Development
+
+### Prerequisites
+
+- Python 3.9+
+- Docker (optional)
+
+### Running Locally
+
+1. Install dependencies:
+
 ```bash
 pip install -r requirements.txt
 ```
 
-2. Запустите приложение:
+2. Run the application:
+
 ```bash
 python app.py
 ```
 
-3. Откройте в браузере http://localhost:5000
+3. Access the web interface at http://localhost:5000
 
-### В Docker-контейнере
+### Building and Running with Docker
 
-1. Соберите Docker-образ:
+1. Build the Docker image:
+
 ```bash
-docker build -t resource-controller .
+docker build -t memory-increaser .
 ```
 
-2. Запустите контейнер:
+2. Run the container:
+
 ```bash
-docker run -p 5000:5000 resource-controller
+docker run -p 5000:5000 -e MEMORY_INCREMENT_MB=20 memory-increaser
 ```
 
-3. Откройте в браузере http://localhost:5000
+3. Access the web interface at http://localhost:5000
 
-## Использование в Kubernetes
+## Kubernetes Deployment with Helm
 
-Пример манифеста для деплоя в Kubernetes:
+### Prerequisites
 
-```yaml
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: resource-controller
-spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app: resource-controller
-  template:
-    metadata:
-      labels:
-        app: resource-controller
-    spec:
-      containers:
-      - name: resource-controller
-        image: resource-controller:latest
-        ports:
-        - containerPort: 5000
-        resources:
-          limits:
-            cpu: "1"
-            memory: "1Gi"
-          requests:
-            cpu: "100m"
-            memory: "128Mi"
-``` 
+- Kubernetes cluster
+- Helm 3
+
+### Deployment
+
+1. Update the values in `helm/resource-changer-app/values.yaml` as needed
+
+2. Install the chart:
+
+```bash
+helm install memory-increaser ./helm/resource-changer-app
+```
+
+3. To update the memory increment rate:
+
+```bash
+helm upgrade memory-increaser ./helm/resource-changer-app --set env.MEMORY_INCREMENT_MB=30
+```
+
+### Checking Memory Usage
+
+You can use the following command to see the memory usage of the pod:
+
+```bash
+kubectl top pod -l app.kubernetes.io/name=resource-changer-app
+```
+
+## How It Works
+
+The application creates a Python thread that allocates a fixed amount of memory (specified by `MEMORY_INCREMENT_MB`) every second and stores it in a global list. This causes a predictable linear increase in memory consumption that can be observed in Kubernetes. 

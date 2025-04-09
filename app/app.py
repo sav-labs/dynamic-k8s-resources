@@ -60,6 +60,9 @@ def memory_load_thread():
     last_memory_size = 0
     allocation_interval = 0.5  # Интервал между выделениями памяти в секундах (уменьшено с 1.0 до 0.5)
     
+    # Переменная для отслеживания запроса на немедленное освобождение памяти
+    immediate_release_requested = False
+    
     while should_run:
         try:
             # Получаем информацию о системной памяти
@@ -76,7 +79,30 @@ def memory_load_thread():
             logger.debug(f"Memory status: current={current_size:.1f}MB, target={process_limit_mb:.1f}MB, available={available_memory_mb:.1f}MB")
             
             current_time = time.time()
-            if process_limit_mb > current_size and available_memory_mb > (process_limit_mb - current_size) * 1.2:
+            
+            # Проверяем, нужно ли уменьшить использование памяти
+            if memory_load_mb < current_size or immediate_release_requested:
+                # Освобождаем память немедленно, если нужно уменьшить использование
+                chunks_to_release = max(1, min(10, len(memory_data) // 5))  # Освобождаем до 10 чанков за раз, но не меньше 1
+                
+                for _ in range(chunks_to_release):
+                    if memory_data and (memory_load_mb < current_size or immediate_release_requested):
+                        memory_data.pop()
+                        current_size = sum(len(d) for d in memory_data) / (1024 * 1024)
+                        logger.debug(f"Released memory chunk, current size: {current_size:.1f}MB")
+                    else:
+                        break
+                
+                last_allocation_time = current_time
+                last_memory_size = current_size
+                immediate_release_requested = False
+                
+                # Если мы всё ещё выше целевого значения, проверим еще раз скорее
+                if memory_load_mb < current_size:
+                    time.sleep(0.1)  # Короткая пауза перед следующей попыткой освобождения
+                    continue
+                
+            elif process_limit_mb > current_size and available_memory_mb > (process_limit_mb - current_size) * 1.2:
                 # Проверяем прошло ли достаточно времени с последнего выделения памяти
                 if current_time - last_allocation_time >= allocation_interval:
                     # Вычисляем максимально допустимый прирост памяти за этот интервал
@@ -103,12 +129,6 @@ def memory_load_thread():
                             time.sleep(2)
                 else:
                     logger.debug(f"Waiting for allocation interval: {allocation_interval - (current_time - last_allocation_time):.1f}s remaining")
-            elif memory_load_mb < current_size and memory_data:
-                # Уменьшаем использование памяти
-                memory_data.pop()
-                logger.debug("Released memory chunk")
-                last_allocation_time = current_time
-                last_memory_size = current_size
             
             time.sleep(MEMORY_CHECK_INTERVAL)
         except Exception as e:
@@ -146,6 +166,9 @@ def start_threads():
     memory_thread = threading.Thread(target=memory_load_thread)
     monitor_thread = threading.Thread(target=resource_monitor_thread)
     
+    # Добавляем атрибут для немедленного освобождения памяти
+    memory_thread.immediate_release_requested = False
+    
     cpu_thread.daemon = True
     memory_thread.daemon = True
     monitor_thread.daemon = True
@@ -179,6 +202,9 @@ def update_resources():
         
         logger.info(f"Resource update requested: CPU={new_cpu_load}%, Memory={new_memory_load_mb}MB")
         
+        # Определяем, уменьшается ли память
+        memory_decreased = new_memory_load_mb < memory_load_mb
+        
         # Безопасно обновляем значения
         cpu_load = new_cpu_load
         
@@ -191,6 +217,13 @@ def update_resources():
             memory_load_mb = safe_limit_mb
         else:
             memory_load_mb = new_memory_load_mb
+        
+        # Запрашиваем немедленное освобождение памяти, если целевое значение уменьшилось
+        if memory_decreased:
+            # Устанавливаем флаг немедленного освобождения памяти
+            global memory_thread
+            memory_thread.immediate_release_requested = True
+            logger.info(f"Requested immediate memory release to {memory_load_mb}MB")
         
         return jsonify({
             'status': 'success',

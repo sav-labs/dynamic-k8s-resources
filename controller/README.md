@@ -43,7 +43,7 @@ The controller supports the following environment variables:
 | `METRICS_FETCH_INTERVAL` | Interval between metrics checks (in seconds) | `30` |
 | `KUBE_STATE_METRICS_URL` | URL to access the Kube State Metrics API | Not set |
 | `LOG_LEVEL` | Logging level (DEBUG, INFO, WARNING, ERROR) | `INFO` |
-| `LABEL_SELECTOR` | Label selector to filter pods for monitoring | Not set - monitors all pods |
+| `LABEL_SELECTOR` | Label selector to filter pods for monitoring | `dynamic-resources=true` |
 | `SCALE_UP_THRESHOLD` | Memory usage ratio threshold to trigger scaling up | `0.8` (80%) |
 | `SCALE_UP_USAGE_MULTIPLIER` | Multiplier applied to current usage when scaling up | `1.4` (140%) |
 | `SCALE_DOWN_USAGE_MULTIPLIER` | Multiplier applied to current usage when scaling down | `2.5` (250%) |

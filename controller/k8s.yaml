@@ -73,10 +73,10 @@ spec:
             - name: SCALE_UP_THRESHOLD
               value: "0.5"
             - name: SCALE_UP_USAGE_MULTIPLIER
-              value: "3"
+              value: "1.5"
             - name: "SCALE_DOWN_USAGE_MULTIPLIER"
-              value: "2.5"
+              value: "2"
             - name: COOLDOWN_PERIOD_SECONDS
               value: "60"
             - name: MIN_REQUEST_MEMORY
-              value: "150"
+              value: "128"
